@@ -115,34 +115,43 @@
     }
 
     function initGlobe() {
-      const container = document.getElementById('globe');
-      
-      globeInstance = Globe()(container)
-        // Fixed: Forced "https://" so local double-clicks can still load the textures!
-        .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-dark.jpg')
-        .backgroundImageUrl('https://unpkg.com/three-globe/example/img/night-sky.png')
-        // Starts the camera centered over the Middle East & South Asia
-        .pointOfView({ lat: 24, lng: 70, altitude: 2.2 }, 0)
-        .pointsData(allData.map(f => {
-          // Safety check in case some features lack coordinates
-          const coords = f.geometry?.coordinates || [0, 0];
-          return { lat: coords[1], lng: coords[0], ...f.properties, size: 0.8 };
-        }))
-        .pointAltitude(0)
-        .pointColor(() => '#c9a84c')
-        .pointRadius(d => d.size || 0.8)
-        .onPointClick(showModalPopup)
-        .pointLabel(d => `<b>${d.Name || 'Unknown'}</b><br>${d.City || ''}, ${d.Country || ''}`);
-
-      globeInstance.controls().autoRotate = true;
-      globeInstance.controls().autoRotateSpeed = 1.2;
-
-      setTimeout(() => { 
-        if (globeInstance) {
-          globeInstance.width(container.clientWidth);
-          globeInstance.height(container.clientHeight);
-        } 
-      }, 400);
+        const container = document.getElementById('globe');
+        
+        globeInstance = Globe()(container)
+          // Swapped to a bright, daytime satellite image
+          .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg')
+          .backgroundImageUrl('https://unpkg.com/three-globe/example/img/night-sky.png')
+          .pointOfView({ lat: 24, lng: 70, altitude: 2.2 }, 0)
+          .pointsData(allData.map(f => {
+            const coords = f.geometry?.coordinates || [0, 0];
+            return { lat: coords[1], lng: coords[0], ...f.properties, size: 0.8 };
+          }))
+          .pointAltitude(0)
+          // Changed pin color to a bright red to stand out against the daytime map. 
+          // Change '#ef4444' back to '#c9a84c' if you want to keep the gold!
+          .pointColor(() => '#ef4444') 
+          .pointRadius(d => d.size || 0.8)
+          .onPointClick(showModalPopup)
+          .pointLabel(d => `<b>${d.Name || 'Unknown'}</b><br>${d.City || ''}, ${d.Country || ''}`);
+  
+        globeInstance.controls().autoRotate = true;
+        // 1. Slowed down the rotation speed (was 1.2)
+        globeInstance.controls().autoRotateSpeed = 0.5;
+  
+        // 2. Add Hover-to-Pause functionality
+        container.addEventListener('pointerenter', () => {
+          globeInstance.controls().autoRotate = false;
+        });
+        container.addEventListener('pointerleave', () => {
+          globeInstance.controls().autoRotate = true;
+        });
+  
+        setTimeout(() => { 
+          if (globeInstance) {
+            globeInstance.width(container.clientWidth);
+            globeInstance.height(container.clientHeight);
+          } 
+        }, 400);
     }
 
     function showModalPopup(d) {
