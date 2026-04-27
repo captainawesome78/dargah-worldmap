@@ -19,18 +19,17 @@
       border-radius: 16px; 
       box-shadow: 0 20px 25px -5px rgb(16 185 129); 
     }
-    .sufi-green { color: #10b981; }
     
-    /* Spinning globe animation */
+    /* SPINNING GLOBE - bigger & stronger */
     @keyframes spin {
       from { transform: rotate(0deg); }
       to { transform: rotate(360deg); }
     }
     .spinning-globe {
       display: inline-block;
-      font-size: 2.25rem;
-      animation: spin 25s linear infinite;
-      filter: drop-shadow(0 4px 6px rgba(16, 185, 129, 0.3));
+      font-size: 2.75rem;           /* bigger */
+      animation: spin 15s linear infinite;
+      filter: drop-shadow(0 0 12px rgb(16 185 129));
     }
     
     .custom-cluster {
@@ -46,15 +45,14 @@
   </style>
 </head>
 <body class="bg-zinc-950 text-white overflow-hidden">
-  <!-- Header with spinning globe -->
+  <!-- Header -->
   <div class="absolute top-0 left-0 right-0 z-50 bg-black/90 backdrop-blur-lg border-b border-emerald-500/30 px-6 py-4 flex items-center justify-between">
     <div class="flex items-center gap-4">
+      <!-- Spinning globe -->
       <span class="spinning-globe">🌍</span>
       <div>
-        <h1 class="text-3xl font-bold tracking-tighter flex items-center gap-2">
-          Dargah World Map
-        </h1>
-        <p class="text-emerald-400 text-sm -mt-1">Sufi shrines &amp; dargahs across the globe</p>
+        <h1 class="text-3xl font-bold tracking-tighter">Dargah World Map</h1>
+        <p class="text-emerald-400 text-sm -mt-1">Sufi shrines &amp; dargahs across the globe • v2.1</p>
       </div>
     </div>
     
@@ -72,47 +70,37 @@
   <script>
     tailwind.config = { content: ["./**/*.{html,js}"] };
 
-    const map = L.map('map', { 
-      zoomControl: true, 
-      attributionControl: false 
-    }).setView([20, 0], 2);   // Full world view so globe feels visible
+    const map = L.map('map', { zoomControl: true, attributionControl: false })
+      .setView([20, 0], 2);
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19,
-    }).addTo(map);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
 
     const markers = L.markerClusterGroup({
       showCoverageOnHover: false,
       maxClusterRadius: 60,
-      iconCreateFunction: (cluster) => {
-        return L.divIcon({
-          html: `<div class="custom-cluster w-9 h-9 text-lg">${cluster.getChildCount()}</div>`,
-          className: '',
-          iconSize: [36, 36]
-        });
-      }
+      iconCreateFunction: (cluster) => L.divIcon({
+        html: `<div class="custom-cluster w-9 h-9 text-lg">${cluster.getChildCount()}</div>`,
+        iconSize: [36, 36]
+      })
     });
 
     fetch('data.geojson')
       .then(res => res.json())
       .then(data => {
         L.geoJSON(data, {
-          pointToLayer: (feature, latlng) => {
-            return L.marker(latlng, {
-              icon: L.divIcon({
-                className: 'custom-marker',
-                html: `<div class="text-4xl drop-shadow-xl">🕌</div>`,
-                iconSize: [48, 48],
-                iconAnchor: [24, 24]
-              })
-            });
-          },
+          pointToLayer: (feature, latlng) => L.marker(latlng, {
+            icon: L.divIcon({
+              html: `<div class="text-4xl drop-shadow-xl">🕌</div>`,
+              iconSize: [48, 48],
+              iconAnchor: [24, 24]
+            })
+          }),
           onEachFeature: (feature, layer) => {
             const p = feature.properties;
             
             const linkHTML = p["Links to know more"] 
               ? `<a href="${p["Links to know more"]}" target="_blank" 
-                   class="mt-4 inline-flex items-center gap-2 text-sm px-5 py-2 bg-emerald-600 hover:bg-emerald-700 rounded-3xl transition text-white">
+                   class="mt-4 inline-flex items-center gap-2 text-sm px-5 py-2 bg-emerald-600 hover:bg-emerald-700 rounded-3xl transition text-white font-semibold">
                    Learn more about this dargah →
                  </a>` 
               : '';
@@ -120,38 +108,22 @@
             const popupHTML = `
               <div class="max-w-sm p-1">
                 <h2 class="text-2xl font-bold text-emerald-400">${p.Name}</h2>
-                
                 <div class="flex flex-wrap gap-2 mt-3">
                   <span class="px-4 py-1 text-xs font-semibold bg-emerald-100 text-emerald-900 rounded-3xl">${p.Saint_Name}</span>
                   <span class="px-4 py-1 text-xs font-semibold bg-amber-100 text-amber-900 rounded-3xl">${p.Silsila}</span>
                 </div>
-                
-                <p class="text-emerald-600 mt-3">
-                  ${p.City}, ${p.Country} • ${p.Era_Century}
-                </p>
-                
-                <p class="text-zinc-700 dark:text-zinc-300 mt-4 text-[15px] leading-relaxed">
-                  ${p.Description}
-                </p>
-                
+                <p class="text-emerald-600 mt-3">${p.City}, ${p.Country} • ${p.Era_Century}</p>
+                <p class="text-zinc-700 dark:text-zinc-300 mt-4 text-[15px] leading-relaxed">${p.Description}</p>
                 ${linkHTML}
               </div>
             `;
 
-            layer.bindPopup(popupHTML, {
-              closeButton: true,
-              offset: [0, -10],
-              maxWidth: 380
-            });
+            layer.bindPopup(popupHTML, { closeButton: true, offset: [0, -10], maxWidth: 380 });
           }
         }).addTo(markers);
 
         markers.addTo(map);
         map.fitBounds(markers.getBounds().pad(0.2));
-      })
-      .catch(err => {
-        console.error(err);
-        alert("data.geojson not found! Please make sure it's in the same folder as index.html");
       });
   </script>
 </body>
