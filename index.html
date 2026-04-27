@@ -5,12 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dargah World Map • Sufi Shrines Worldwide</title>
   
-  <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Amiri:ital,wght@400;700&family=Cinzel+Decorative:wght@400;700&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
   
-  <!-- globe.gl + Three.js -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/globe.gl@2.45.3/dist/globe.gl.min.js"></script>
   
@@ -45,7 +43,6 @@
 </head>
 <body>
 
-  <!-- INTRO -->
   <div id="intro">
     <div style="position:relative;z-index:10;text-align:center;padding:40px 24px;max-width:520px;">
       <div style="font-family:'Amiri',serif;font-size:1.9rem;color:#c9a84c;letter-spacing:3px;">بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</div>
@@ -58,9 +55,7 @@
     </div>
   </div>
 
-  <!-- MAIN APP -->
   <div id="app">
-    <!-- Header -->
     <div class="map-header">
       <div style="display:flex;align-items:center;gap:14px;">
         <span style="font-size:2.2rem;">🕌</span>
@@ -69,10 +64,8 @@
       <a href="https://github.com/captainawesome78/dargah-worldmap" target="_blank" style="color:#c9a84c;text-decoration:none;font-size:0.95rem;display:flex;align-items:center;gap:6px;">⭐ Star on GitHub</a>
     </div>
 
-    <!-- 3D GLOBE -->
     <div id="globe"></div>
 
-    <!-- Filters -->
     <div class="side-panel">
       <div class="pcard">
         <input type="text" id="search-input" placeholder="Search name, saint, city..." oninput="filterGlobe()" style="width:100%;background:rgba(255,255,255,.08);border:1px solid rgba(201,168,76,.3);border-radius:12px;padding:14px 16px;color:#e8dcc8;outline:none;font-size:1rem;">
@@ -88,7 +81,6 @@
     <button onclick="backToIntro()" style="position:absolute;bottom:30px;right:30px;z-index:900;background:rgba(10,10,24,0.9);border:1px solid #c9a84c;color:#c9a84c;padding:12px 26px;border-radius:9999px;cursor:pointer;font-size:0.95rem;">← Back to Intro</button>
   </div>
 
-  <!-- Click Popup -->
   <div id="modal" class="modal" onclick="if(event.target.id==='modal')hideModal()">
     <div class="modal-content" onclick="event.stopImmediatePropagation()">
       <div id="modal-content-inner" style="color:#e8dcc8;"></div>
@@ -113,13 +105,20 @@
       const cons = [...new Set(allData.map(f => f.properties.Country).filter(Boolean))].sort();
       const selSil = document.getElementById('f-silsila');
       const selCo = document.getElementById('f-country');
+      
+      // Fixed: Add default "All" options so the globe isn't pre-filtered
+      selSil.innerHTML = '<option value="">All Silsilas</option>';
+      selCo.innerHTML = '<option value="">All Countries</option>';
+
       sils.forEach(s => { const o = document.createElement('option'); o.value = s; o.textContent = s; selSil.appendChild(o); });
       cons.forEach(c => { const o = document.createElement('option'); o.value = c; o.textContent = c; selCo.appendChild(o); });
     }
 
     function initGlobe() {
       const container = document.getElementById('globe');
-      globeInstance = new Globe(container)                    // ← NEW KEYWORD ADDED
+      
+      // Fixed: Removed 'new' keyword. globe.gl is a factory function.
+      globeInstance = Globe()(container)                    
         .globeImageUrl('//unpkg.com/three-globe/example/img/earth-dark.jpg')
         .backgroundImageUrl('//unpkg.com/three-globe/example/img/night-sky.png')
         .pointOfView({ altitude: 2.5 }, 0)
@@ -136,8 +135,13 @@
       globeInstance.controls().autoRotate = true;
       globeInstance.controls().autoRotateSpeed = 1.2;
 
-      // Force resize after render
-      setTimeout(() => { if (globeInstance) globeInstance._renderer.setSize(container.clientWidth, container.clientHeight); }, 300);
+      // Fixed: Use official .width() and .height() methods
+      setTimeout(() => { 
+        if (globeInstance) {
+          globeInstance.width(container.clientWidth);
+          globeInstance.height(container.clientHeight);
+        } 
+      }, 300);
     }
 
     function showModalPopup(d) {
