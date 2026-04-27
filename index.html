@@ -20,18 +20,6 @@
       box-shadow: 0 20px 25px -5px rgb(16 185 129); 
     }
     
-    /* SPINNING GLOBE - bigger & stronger */
-    @keyframes spin {
-      from { transform: rotate(0deg); }
-      to { transform: rotate(360deg); }
-    }
-    .spinning-globe {
-      display: inline-block;
-      font-size: 2.75rem;           /* bigger */
-      animation: spin 15s linear infinite;
-      filter: drop-shadow(0 0 12px rgb(16 185 129));
-    }
-    
     .custom-cluster {
       background: #10b981;
       color: white;
@@ -45,14 +33,13 @@
   </style>
 </head>
 <body class="bg-zinc-950 text-white overflow-hidden">
-  <!-- Header -->
+  <!-- Clean header (no spinning globe in corner) -->
   <div class="absolute top-0 left-0 right-0 z-50 bg-black/90 backdrop-blur-lg border-b border-emerald-500/30 px-6 py-4 flex items-center justify-between">
-    <div class="flex items-center gap-4">
-      <!-- Spinning globe -->
-      <span class="spinning-globe">🌍</span>
+    <div class="flex items-center gap-3">
+      <span class="text-4xl">🕌</span>
       <div>
         <h1 class="text-3xl font-bold tracking-tighter">Dargah World Map</h1>
-        <p class="text-emerald-400 text-sm -mt-1">Sufi shrines &amp; dargahs across the globe • v2.1</p>
+        <p class="text-emerald-400 text-sm -mt-1">Sufi shrines &amp; dargahs across the globe • v2.2</p>
       </div>
     </div>
     
@@ -98,9 +85,10 @@
           onEachFeature: (feature, layer) => {
             const p = feature.properties;
             
+            // NEW WHITE BUTTON with dark text
             const linkHTML = p["Links to know more"] 
               ? `<a href="${p["Links to know more"]}" target="_blank" 
-                   class="mt-4 inline-flex items-center gap-2 text-sm px-5 py-2 bg-emerald-600 hover:bg-emerald-700 rounded-3xl transition text-white font-semibold">
+                   class="mt-4 inline-flex items-center gap-2 text-sm px-5 py-2 bg-white hover:bg-gray-100 text-emerald-900 font-semibold rounded-3xl transition border border-emerald-200">
                    Learn more about this dargah →
                  </a>` 
               : '';
@@ -124,7 +112,8 @@
 
         markers.addTo(map);
         map.fitBounds(markers.getBounds().pad(0.2));
-      });
+      })
+      .catch(err => console.error(err));
   </script>
 </body>
 </html>
