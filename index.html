@@ -15,8 +15,24 @@
   
   <style>
     #map { height: 100vh; width: 100%; }
-    .leaflet-popup-content-wrapper { border-radius: 16px; box-shadow: 0 20px 25px -5px rgb(16 185 129); }
+    .leaflet-popup-content-wrapper { 
+      border-radius: 16px; 
+      box-shadow: 0 20px 25px -5px rgb(16 185 129); 
+    }
     .sufi-green { color: #10b981; }
+    
+    /* Spinning globe animation */
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    .spinning-globe {
+      display: inline-block;
+      font-size: 2.25rem;
+      animation: spin 25s linear infinite;
+      filter: drop-shadow(0 4px 6px rgba(16, 185, 129, 0.3));
+    }
+    
     .custom-cluster {
       background: #10b981;
       color: white;
@@ -30,16 +46,19 @@
   </style>
 </head>
 <body class="bg-zinc-950 text-white overflow-hidden">
-  <!-- Header -->
+  <!-- Header with spinning globe -->
   <div class="absolute top-0 left-0 right-0 z-50 bg-black/90 backdrop-blur-lg border-b border-emerald-500/30 px-6 py-4 flex items-center justify-between">
-    <div class="flex items-center gap-3">
-      <span class="text-4xl">🕌</span>
+    <div class="flex items-center gap-4">
+      <span class="spinning-globe">🌍</span>
       <div>
-        <h1 class="text-3xl font-bold tracking-tighter">Dargah World Map</h1>
+        <h1 class="text-3xl font-bold tracking-tighter flex items-center gap-2">
+          Dargah World Map
+        </h1>
         <p class="text-emerald-400 text-sm -mt-1">Sufi shrines &amp; dargahs across the globe</p>
       </div>
     </div>
-    <a href="https://github.com/YOURUSERNAME/sufi-dargah-world-map" target="_blank"
+    
+    <a href="https://github.com/captainawesome78/dargah-worldmap" target="_blank"
        class="flex items-center gap-2 text-xs px-5 py-2 bg-white/10 hover:bg-white/20 rounded-3xl transition">
       ⭐ Star on GitHub
     </a>
@@ -53,8 +72,10 @@
   <script>
     tailwind.config = { content: ["./**/*.{html,js}"] };
 
-    const map = L.map('map', { zoomControl: true, attributionControl: false })
-      .setView([20, 78], 5); // Beautiful starting view centered on India
+    const map = L.map('map', { 
+      zoomControl: true, 
+      attributionControl: false 
+    }).setView([20, 0], 2);   // Full world view so globe feels visible
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
@@ -91,7 +112,7 @@
             
             const linkHTML = p["Links to know more"] 
               ? `<a href="${p["Links to know more"]}" target="_blank" 
-                   class="mt-4 inline-flex items-center gap-2 text-sm px-5 py-2 bg-emerald-600 hover:bg-emerald-700 rounded-3xl transition">
+                   class="mt-4 inline-flex items-center gap-2 text-sm px-5 py-2 bg-emerald-600 hover:bg-emerald-700 rounded-3xl transition text-white">
                    Learn more about this dargah →
                  </a>` 
               : '';
