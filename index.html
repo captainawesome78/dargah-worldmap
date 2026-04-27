@@ -24,7 +24,7 @@
     /* Main App */
     #app { position:fixed; inset:0; opacity:0; pointer-events:none; transition:opacity .8s ease; }
     #app.visible { opacity:1; pointer-events:all; }
-    #globe { width:100%; height:100vh; }
+    #globe { position:absolute; inset:0; width:100%; height:100vh; }
     
     /* Header */
     .map-header { position:absolute; top:0; left:0; right:0; z-index:1000; background:linear-gradient(180deg,rgba(5,5,15,.96) 0%,rgba(5,5,15,0) 100%); padding:16px 24px; display:flex; align-items:center; justify-content:space-between; pointer-events:none; }
@@ -91,6 +91,8 @@
   <script>
     let globeInstance, allData = [];
 
+    // Local file testing often blocks fetch requests. 
+    // If you see 0 shrines mapped locally, it will work once pushed to GitHub.
     fetch('data.geojson')
       .then(r => r.json())
       .then(data => {
@@ -98,7 +100,7 @@
         document.getElementById('shrine-count').textContent = allData.length;
         populateFilters();
       })
-      .catch(() => console.log("Using fallback data if needed"));
+      .catch(err => console.error("Could not load data.geojson", err));
 
     function populateFilters() {
       const sils = [...new Set(allData.map(f => f.properties.Silsila).filter(Boolean))].sort();
@@ -106,7 +108,6 @@
       const selSil = document.getElementById('f-silsila');
       const selCo = document.getElementById('f-country');
       
-      // Fixed: Add default "All" options so the globe isn't pre-filtered
       selSil.innerHTML = '<option value="">All Silsilas</option>';
       selCo.innerHTML = '<option value="">All Countries</option>';
 
@@ -117,39 +118,40 @@
     function initGlobe() {
       const container = document.getElementById('globe');
       
-      // Fixed: Removed 'new' keyword. globe.gl is a factory function.
-      globeInstance = Globe()(container)                    
-        .globeImageUrl('//unpkg.com/three-globe/example/img/earth-dark.jpg')
-        .backgroundImageUrl('//unpkg.com/three-globe/example/img/night-sky.png')
-        .pointOfView({ altitude: 2.5 }, 0)
+      globeInstance = Globe()(container)
+        // Fixed: Forced "https://" so local double-clicks can still load the textures!
+        .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-dark.jpg')
+        .backgroundImageUrl('https://unpkg.com/three-globe/example/img/night-sky.png')
+        // Starts the camera centered over the Middle East & South Asia
+        .pointOfView({ lat: 24, lng: 70, altitude: 2.2 }, 0)
         .pointsData(allData.map(f => {
-          const [lon, lat] = f.geometry.coordinates;
-          return { lat, lng: lon, ...f.properties, size: 0.8 };
+          // Safety check in case some features lack coordinates
+          const coords = f.geometry?.coordinates || [0, 0];
+          return { lat: coords[1], lng: coords[0], ...f.properties, size: 0.8 };
         }))
         .pointAltitude(0)
         .pointColor(() => '#c9a84c')
-        .pointRadius(d => d.size)
+        .pointRadius(d => d.size || 0.8)
         .onPointClick(showModalPopup)
-        .pointLabel(d => `<b>${d.Name}</b><br>${d.City}, ${d.Country}`);
+        .pointLabel(d => `<b>${d.Name || 'Unknown'}</b><br>${d.City || ''}, ${d.Country || ''}`);
 
       globeInstance.controls().autoRotate = true;
       globeInstance.controls().autoRotateSpeed = 1.2;
 
-      // Fixed: Use official .width() and .height() methods
       setTimeout(() => { 
         if (globeInstance) {
           globeInstance.width(container.clientWidth);
           globeInstance.height(container.clientHeight);
         } 
-      }, 300);
+      }, 400);
     }
 
     function showModalPopup(d) {
       const html = `
-        <h2 style="color:#c9a84c;font-size:1.6rem;margin-bottom:6px;">${d.Name}</h2>
-        <p style="color:#10b981;margin-bottom:16px;">${d.Saint_Name} • ${d.Silsila}</p>
-        <p style="margin-bottom:14px;"><strong>${d.City}, ${d.Country}</strong> • ${d.Era_Century}</p>
-        <p style="line-height:1.65;color:#bbb0a0;">${d.Description}</p>
+        <h2 style="color:#c9a84c;font-size:1.6rem;margin-bottom:6px;">${d.Name || ''}</h2>
+        <p style="color:#10b981;margin-bottom:16px;">${d.Saint_Name || ''} • ${d.Silsila || ''}</p>
+        <p style="margin-bottom:14px;"><strong>${d.City || ''}, ${d.Country || ''}</strong> • ${d.Era_Century || ''}</p>
+        <p style="line-height:1.65;color:#bbb0a0;">${d.Description || ''}</p>
         ${d["Links to know more"] ? `<a href="${d["Links to know more"]}" target="_blank" class="pop-link">Learn more about this dargah →</a>` : ''}
       `;
       document.getElementById('modal-content-inner').innerHTML = html;
@@ -173,8 +175,8 @@
 
       if (globeInstance) {
         globeInstance.pointsData(filtered.map(f => {
-          const [lon, lat] = f.geometry.coordinates;
-          return { lat, lng: lon, ...f.properties, size: 0.8 };
+          const coords = f.geometry?.coordinates || [0, 0];
+          return { lat: coords[1], lng: coords[0], ...f.properties, size: 0.8 };
         }));
       }
     }
