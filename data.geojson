@@ -1,0 +1,107 @@
+{
+   "type": "FeatureCollection",
+   "features": [
+  {
+    "type": "Feature",
+    "geometry": {
+       "type": "Point",
+       "coordinates":  [ 76.73177007,27.26432367 ]
+    },
+    "properties": {
+    "Name":"Ajmer Sharif Dargah",
+    "Saint_Name":"Khwaja Moinuddin Chishti",
+    "Silsila":"Chishti",
+    "City":"Ajmer",
+    "Country":"India",
+    "Era_Century":"12th - 13th Century",
+    "Description":"The \"Gharib Nawaz\" of the East, one of the most visited Sufi shrines globally.",
+    "Links to know more":"https://en.wikipedia.org/wiki/Mu%27in_al-Din_Chishti"
+    }
+  },
+  {
+    "type": "Feature",
+    "geometry": {
+       "type": "Point",
+       "coordinates":  [ 76.85241775,17.34459829 ]
+    },
+    "properties": {
+    "Name":"Dargah Khwaja Bandanawaz",
+    "Saint_Name":"Khwaja Syed Muhammad Gesu Daraz",
+    "Silsila":"Chishti",
+    "City":"Gulbarga",
+    "Country":"India",
+    "Era_Century":"14th - 15th Century",
+    "Description":"A premier shrine of the Deccan; the saint was a prolific writer and disciple of Nasiruddin Chiragh Dehlavi.",
+    "Links to know more":"https://en.wikipedia.org/wiki/Bande_Nawaz"
+    }
+  },
+  {
+    "type": "Feature",
+    "geometry": {
+       "type": "Point",
+       "coordinates":  [ 76.82484299,17.35192628 ]
+    },
+    "properties": {
+    "Name":"Dargah Sheikh Sirajuddin Junaidi",
+    "Saint_Name":"Hazrat Sheikh Sirajuddin Junaidi",
+    "Silsila":"Junaidi",
+    "City":"Gulbarga",
+    "Country":"India",
+    "Era_Century":"14th Century",
+    "Description":"Known as \"Shaikh Roza,\" he was the spiritual mentor of the Bahmani Sultans and lived to be 111 years old.",
+    "Links to know more":"https://www.newageislam.com/islamic-personalities/adnan-faizi-new-age-islam/hazrat-shaykh-sirajuddin-junaidi-spiritual-luminary-guided-kings-deccan/d/136554"
+    }
+  },
+  {
+    "type": "Feature",
+    "geometry": {
+       "type": "Point",
+       "coordinates":  [ 76.56149518,17.560075 ]
+    },
+    "properties": {
+    "Name":"Dargah Ladle Mashaikh",
+    "Saint_Name":"Hazrat Alauddin Ansari",
+    "Silsila":"Chishti",
+    "City":"Aland",
+    "Country":"India",
+    "Era_Century":"14th Century",
+    "Description":"Located 40km from Gulbarga, this shrine is famous for the \"Asa Sharif\" (holy staff) and deep ties with Bandanawaz.",
+    "Links to know more":"https://www.theislamicheritage.com/detail/Dargah-Hazrat-Maqdoom-Alauddin-Ansari-R-A-Aland-shareef-"
+    }
+  },
+  {
+    "type": "Feature",
+    "geometry": {
+       "type": "Point",
+       "coordinates":  [ 77.03443226,17.02999475 ]
+    },
+    "properties": {
+    "Name":"Halkatta Sharif",
+    "Saint_Name":"Hazrat Syed Muhammad Badshah Quadeeri",
+    "Silsila":"Qadiri",
+    "City":"Halkatta",
+    "Country":"India",
+    "Era_Century":"20th Century",
+    "Description":"A major Qadiri center located near Wadi, known for its annual Urs which draws massive crowds.",
+    "Links to know more":"https://dargahinfo.com/Dargah_History.aspx?HID=119"
+    }
+  },
+  {
+    "type": "Feature",
+    "geometry": {
+       "type": "Point",
+       "coordinates":  [ 76.7999209,17.35697767 ]
+    },
+    "properties": {
+    "Name":"Dargah Ruknuddin Tola",
+    "Saint_Name":"Hazrat Ruknuddin Tola",
+    "Silsila":"Chishti",
+    "City":"Gulbarga",
+    "Country":"India",
+    "Era_Century":"14th Century",
+    "Description":"Located on a hilltop near the main Bandanawaz Dargah; he was a close companion and contemporary of the saint.",
+    "Links to know more":"https://dargahinfo.com/Dargah_History.aspx?HID=346"
+    }
+  }
+]
+}
