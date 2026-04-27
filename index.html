@@ -1,33 +1,120 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Global Sufi Shrine Map</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-    <style>
-        #map { height: 100vh; width: 100%; }
-        .custom-popup { font-family: 'Arial'; }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sufi Dargah World Map • Explore Shrines Globally</title>
+  
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <!-- Leaflet MarkerCluster -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
+  
+  <!-- Tailwind CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <style>
+    #map { height: 100vh; width: 100%; }
+    .leaflet-popup-content-wrapper { border-radius: 12px; }
+    .sufi-green { color: #10b981; }
+  </style>
 </head>
-<body>
-    <div id="map"></div>
+<body class="bg-zinc-950 text-white">
+  <!-- Header -->
+  <div class="absolute top-0 left-0 right-0 z-50 bg-black/80 backdrop-blur-md border-b border-emerald-500/30 px-6 py-4 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <span class="text-3xl">🕌</span>
+      <div>
+        <h1 class="text-2xl font-bold tracking-tight">Dargah World Map</h1>
+        <p class="text-emerald-400 text-sm">Explore Sufi shrines & dargahs worldwide</p>
+      </div>
+    </div>
+    <a href="https://github.com/YOURUSERNAME/sufi-dargah-world-map" target="_blank"
+       class="text-xs px-4 py-2 bg-white/10 hover:bg-white/20 rounded-full transition flex items-center gap-2">
+      <span>⭐ Star on GitHub</span>
+    </a>
+  </div>
 
-    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-    <script>
-        const map = L.map('map').setView([20, 0], 2); // Center of the world
+  <!-- Map -->
+  <div id="map"></div>
 
-        // Use a "dark" or "watercolor" style to match AnimalWorldMap's aesthetic
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
 
-        // Load your Dargah data
-        fetch('data.geojson')
-            .then(res => res.json())
-            .then(data => {
-                L.geoJSON(data, {
-                    onEachFeature: (feature, layer) => {
-                        layer.bindPopup(`<h3>${feature.properties.name}</h3><p>${feature.properties.description}</p>`);
-                    }
-                }).addTo(map);
+  <script>
+    // Tailwind script
+    tailwind.config = { content: ["./**/*.{html,js}"] };
+
+    // Initialize map
+    const map = L.map('map', {
+      zoomControl: true,
+      attributionControl: false
+    }).setView([20, 0], 2); // world view
+
+    // Beautiful OpenStreetMap tile (you can change style later)
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      className: 'map-tiles'
+    }).addTo(map);
+
+    // Marker cluster group
+    const markers = L.markerClusterGroup({
+      showCoverageOnHover: false,
+      maxClusterRadius: 50,
+      iconCreateFunction: function (cluster) {
+        return L.divIcon({
+          html: `<div class="bg-emerald-600 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold shadow-lg">${cluster.getChildCount()}</div>`,
+          className: 'custom-cluster',
+          iconSize: [32, 32]
+        });
+      }
+    });
+
+    // Load your GeoJSON
+    fetch('data.geojson')
+      .then(response => response.json())
+      .then(data => {
+        L.geoJSON(data, {
+          pointToLayer: function (feature, latlng) {
+            // Custom Sufi-style marker (green with dome emoji)
+            return L.marker(latlng, {
+              icon: L.divIcon({
+                className: 'custom-marker',
+                html: `<div class="text-3xl drop-shadow-md">🕌</div>`,
+                iconSize: [40, 40],
+                iconAnchor: [20, 20]
+              })
             });
-    </script>
+          },
+          onEachFeature: function (feature, layer) {
+            if (feature.properties) {
+              const props = feature.properties;
+              
+              // ←←← CUSTOMIZE THIS POPUP BASED ON YOUR GOOGLE SHEET COLUMNS ←←←
+              const popupHTML = `
+                <div class="max-w-xs">
+                  <h3 class="font-bold text-lg suf-green">${props.Name || props.name || 'Sufi Shrine'}</h3>
+                  <p class="text-emerald-600">${props.City || props.city || ''}, ${props.Country || props.country || ''}</p>
+                  <p class="text-sm mt-2 leading-relaxed">${props.Description || props.description || props.Info || ''}</p>
+                  ${props.Saint ? `<p class="text-xs mt-3"><span class="font-medium">Saint:</span> ${props.Saint}</p>` : ''}
+                  ${props.Link ? `<a href="${props.Link}" target="_blank" class="text-xs inline-block mt-3 px-4 py-1 bg-emerald-600 hover:bg-emerald-700 rounded-full">Learn more →</a>` : ''}
+                </div>
+              `;
+              layer.bindPopup(popupHTML, { closeButton: true, offset: [0, -10] });
+            }
+          }
+        }).addTo(markers);
+        
+        markers.addTo(map);
+        
+        // Auto-fit to all shrines
+        map.fitBounds(markers.getBounds().pad(0.1));
+      })
+      .catch(err => {
+        console.error("Could not load data.geojson", err);
+        alert("Make sure data.geojson is in the same folder!");
+      });
+  </script>
 </body>
 </html>
