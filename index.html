@@ -4,28 +4,26 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dargah World Map • Sufi Shrines Worldwide</title>
-  <meta name="description" content="Interactive 3D globe of Sufi dargahs and shrines worldwide">
   
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Amiri:ital,wght@400;700&family=Cinzel+Decorative:wght@400;700&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
   
-  <!-- Three.js + globe.gl -->
+  <!-- globe.gl + Three.js -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/globe.gl@2.45.3/dist/globe.gl.min.js"></script>
   
   <style>
     :root { --gold: #c9a84c; }
     * { margin:0; padding:0; box-sizing:border-box; }
-    html,body { width:100%; height:100%; overflow:hidden; background:#05050f; font-family:'Jost',sans-serif; color:#e8dcc8; }
+    html, body { width:100%; height:100%; overflow:hidden; background:#05050f; font-family:'Jost',sans-serif; color:#e8dcc8; }
     
     /* Intro */
     #intro { position:fixed; inset:0; z-index:200; display:flex; align-items:center; justify-content:center; background:radial-gradient(ellipse 80% 70% at 50% 40%, #0d1a2e 0%, #05050f 75%); transition:opacity .9s ease; }
     #intro.fade-out { opacity:0; pointer-events:none; }
-    #globe-canvas { position:absolute; inset:0; width:100%; height:100%; }
     
-    /* Main Globe Container */
+    /* Main App */
     #app { position:fixed; inset:0; opacity:0; pointer-events:none; transition:opacity .8s ease; }
     #app.visible { opacity:1; pointer-events:all; }
     #globe { width:100%; height:100vh; }
@@ -36,28 +34,27 @@
     
     /* Side Panel */
     .side-panel { position:absolute; top:80px; left:24px; z-index:900; width:280px; display:flex; flex-direction:column; gap:12px; }
-    .pcard { background:rgba(10,10,24,0.95); border:1px solid rgba(201,168,76,0.2); border-radius:16px; padding:18px; backdrop-filter:blur(16px); }
+    .pcard { background:rgba(10,10,24,0.95); border:1px solid rgba(201,168,76,0.25); border-radius:16px; padding:18px; backdrop-filter:blur(16px); }
     
     /* Modal */
-    .modal { position:fixed; inset:0; z-index:9999; display:none; align-items:center; justify-content:center; background:rgba(5,5,15,0.85); }
-    .modal-content { background:rgba(10,10,24,0.98); border:1px solid #c9a84c; border-radius:20px; width:90%; max-width:420px; padding:24px; box-shadow:0 0 60px rgba(201,168,76,.3); }
-    
-    .pop-link { display:inline-flex; align-items:center; gap:8px; margin-top:16px; padding:12px 24px; background:#c9a84c; color:#1a0f00; font-weight:600; border-radius:9999px; text-decoration:none; transition:all .2s; }
+    .modal { position:fixed; inset:0; z-index:9999; display:none; align-items:center; justify-content:center; background:rgba(5,5,15,0.9); }
+    .modal-content { background:rgba(10,10,24,0.98); border:1px solid #c9a84c; border-radius:20px; width:90%; max-width:420px; padding:28px; box-shadow:0 0 60px rgba(201,168,76,.4); }
+    .pop-link { display:inline-flex; align-items:center; gap:8px; margin-top:20px; padding:14px 28px; background:#c9a84c; color:#1a0f00 !important; font-weight:600; border-radius:9999px; text-decoration:none; transition:all .2s; }
     .pop-link:hover { background:#e8c97a; transform:translateY(-2px); }
   </style>
 </head>
 <body>
-  <!-- INTRO SCREEN -->
+
+  <!-- INTRO -->
   <div id="intro">
-    <canvas id="globe-canvas"></canvas>
-    <div style="position:relative;z-index:10;text-align:center;padding:40px 24px;">
-      <div style="font-family:'Amiri',serif;font-size:1.9rem;color:#c9a84c;text-shadow:0 0 40px rgba(201,168,76,.6);letter-spacing:3px;">بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</div>
-      <h1 style="font-family:'Cinzel Decorative',serif;font-size:3.2rem;margin:20px 0 8px;background:linear-gradient(155deg,#e8c97a,#c9a84c); -webkit-background-clip:text;-webkit-text-fill-color:transparent;">Dargah World Map</h1>
-      <p style="color:#7a6e60;letter-spacing:4px;text-transform:uppercase;font-size:0.95rem;">Sufi Shrines & Sacred Dargahs Worldwide</p>
-      <div style="margin:24px 0;display:flex;align-items:center;justify-content:center;gap:12px;background:rgba(201,168,76,.08);border:1px solid #c9a84c;border-radius:9999px;padding:10px 28px;width:fit-content;margin-left:auto;margin-right:auto;">
-        🕌 <span id="shrine-count" style="font-weight:700;color:#c9a84c;">—</span> shrines mapped
+    <div style="position:relative;z-index:10;text-align:center;padding:40px 24px;max-width:520px;">
+      <div style="font-family:'Amiri',serif;font-size:1.9rem;color:#c9a84c;letter-spacing:3px;">بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</div>
+      <h1 style="font-family:'Cinzel Decorative',serif;font-size:3.4rem;margin:24px 0 12px;background:linear-gradient(155deg,#e8c97a,#c9a84c);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">Dargah World Map</h1>
+      <p style="color:#7a6e60;letter-spacing:4px;text-transform:uppercase;font-size:0.95rem;">Sufi Shrines &amp; Sacred Dargahs Worldwide</p>
+      <div style="margin:32px 0;display:flex;align-items:center;justify-content:center;gap:12px;background:rgba(201,168,76,.08);border:1px solid #c9a84c;border-radius:9999px;padding:12px 32px;width:fit-content;margin-left:auto;margin-right:auto;">
+        🕌 <span id="shrine-count" style="font-weight:700;color:#c9a84c;font-size:1.1rem;">—</span> shrines mapped
       </div>
-      <button onclick="enterMap()" style="background:linear-gradient(135deg,#e8c97a,#c9a84c);color:#1a0f00;padding:16px 48px;font-weight:600;letter-spacing:2px;border-radius:9999px;border:none;cursor:pointer;box-shadow:0 10px 30px rgba(201,168,76,.4);">Explore the Globe →</button>
+      <button onclick="enterMap()" style="background:linear-gradient(135deg,#e8c97a,#c9a84c);color:#1a0f00;padding:18px 56px;font-weight:600;letter-spacing:2px;border-radius:9999px;border:none;cursor:pointer;box-shadow:0 12px 40px rgba(201,168,76,.4);font-size:1.05rem;">Explore the Globe →</button>
     </div>
   </div>
 
@@ -65,131 +62,115 @@
   <div id="app">
     <!-- Header -->
     <div class="map-header">
-      <div style="display:flex;align-items:center;gap:12px;">
-        <span style="font-size:2rem;">🕌</span>
-        <div>
-          <h1 style="font-family:'Cinzel Decorative',serif;font-size:1.4rem;background:linear-gradient(135deg,#e8c97a,#c9a84c);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">Dargah World Map</h1>
-        </div>
+      <div style="display:flex;align-items:center;gap:14px;">
+        <span style="font-size:2.2rem;">🕌</span>
+        <div style="font-family:'Cinzel Decorative',serif;font-size:1.5rem;background:linear-gradient(135deg,#e8c97a,#c9a84c);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">Dargah World Map</div>
       </div>
-      <a href="https://github.com/captainawesome78/dargah-worldmap" target="_blank" style="color:#c9a84c;text-decoration:none;font-size:0.9rem;display:flex;align-items:center;gap:6px;">⭐ Star on GitHub</a>
+      <a href="https://github.com/captainawesome78/dargah-worldmap" target="_blank" style="color:#c9a84c;text-decoration:none;font-size:0.95rem;display:flex;align-items:center;gap:6px;">⭐ Star on GitHub</a>
     </div>
 
-    <!-- Globe -->
+    <!-- 3D GLOBE -->
     <div id="globe"></div>
 
-    <!-- Side Panel -->
+    <!-- Filters -->
     <div class="side-panel">
       <div class="pcard">
-        <input type="text" id="search-input" placeholder="Search name, saint, city..." oninput="filterGlobe()" style="width:100%;background:rgba(255,255,255,.08);border:1px solid #c9a84c33;border-radius:12px;padding:12px 16px;color:#e8dcc8;outline:none;">
+        <input type="text" id="search-input" placeholder="Search name, saint, city..." oninput="filterGlobe()" style="width:100%;background:rgba(255,255,255,.08);border:1px solid rgba(201,168,76,.3);border-radius:12px;padding:14px 16px;color:#e8dcc8;outline:none;font-size:1rem;">
       </div>
       <div class="pcard">
-        <select id="f-silsila" onchange="filterGlobe()" style="width:100%;background:rgba(255,255,255,.08);border:1px solid #c9a84c33;border-radius:12px;padding:12px;color:#e8dcc8;outline:none;">
-          <option value="">All Silsilas</option>
-        </select>
+        <select id="f-silsila" onchange="filterGlobe()" style="width:100%;background:rgba(255,255,255,.08);border:1px solid rgba(201,168,76,.3);border-radius:12px;padding:14px;color:#e8dcc8;outline:none;font-size:1rem;"></select>
       </div>
       <div class="pcard">
-        <select id="f-country" onchange="filterGlobe()" style="width:100%;background:rgba(255,255,255,.08);border:1px solid #c9a84c33;border-radius:12px;padding:12px;color:#e8dcc8;outline:none;">
-          <option value="">All Countries</option>
-        </select>
+        <select id="f-country" onchange="filterGlobe()" style="width:100%;background:rgba(255,255,255,.08);border:1px solid rgba(201,168,76,.3);border-radius:12px;padding:14px;color:#e8dcc8;outline:none;font-size:1rem;"></select>
       </div>
     </div>
 
-    <!-- Back to Globe button (optional) -->
-    <button onclick="backToIntro()" style="position:absolute;bottom:30px;right:30px;z-index:900;background:rgba(10,10,24,0.9);border:1px solid #c9a84c;color:#c9a84c;padding:12px 24px;border-radius:9999px;cursor:pointer;">← Back to Intro</button>
+    <button onclick="backToIntro()" style="position:absolute;bottom:30px;right:30px;z-index:900;background:rgba(10,10,24,0.9);border:1px solid #c9a84c;color:#c9a84c;padding:12px 26px;border-radius:9999px;cursor:pointer;font-size:0.95rem;">← Back to Intro</button>
   </div>
 
-  <!-- Modal Popup -->
+  <!-- Click Popup -->
   <div id="modal" class="modal" onclick="if(event.target.id==='modal')hideModal()">
     <div class="modal-content" onclick="event.stopImmediatePropagation()">
-      <div id="modal-content-inner"></div>
-      <button onclick="hideModal()" style="margin-top:20px;width:100%;padding:12px;background:#333;color:#fff;border:none;border-radius:12px;cursor:pointer;">Close</button>
+      <div id="modal-content-inner" style="color:#e8dcc8;"></div>
+      <button onclick="hideModal()" style="margin-top:24px;width:100%;padding:14px;background:#333;color:white;border:none;border-radius:12px;cursor:pointer;">Close</button>
     </div>
   </div>
 
   <script>
-    let globeInstance, allData = [], filteredData = [];
+    let globeInstance, allData = [];
 
-    // Load data
     fetch('data.geojson')
       .then(r => r.json())
       .then(data => {
         allData = data.features || [];
-        const n = allData.length;
-        document.getElementById('shrine-count').textContent = n;
+        document.getElementById('shrine-count').textContent = allData.length;
         populateFilters();
-        if (document.getElementById('app').classList.contains('visible')) initGlobe();
       })
-      .catch(() => {
-        // Fallback data (your 6 shrines)
-        allData = [{"type":"Feature","geometry":{"type":"Point","coordinates":[76.73177007,27.26432367]},"properties":{"Name":"Ajmer Sharif Dargah","Saint_Name":"Khwaja Moinuddin Chishti","Silsila":"Chishti","City":"Ajmer","Country":"India","Era_Century":"12th - 13th Century","Description":"The \"Gharib Nawaz\" of the East, one of the most visited Sufi shrines globally.","Links to know more":"https://en.wikipedia.org/wiki/Mu%27in_al-Din_Chishti"}}, /* ... rest of your fallback data from previous version ... */ ];
-        populateFilters();
-      });
+      .catch(() => console.log("Using fallback data if needed"));
 
     function populateFilters() {
-      const silsilas = [...new Set(allData.map(f => f.properties.Silsila).filter(Boolean))].sort();
-      const countries = [...new Set(allData.map(f => f.properties.Country).filter(Boolean))].sort();
-      const silSelect = document.getElementById('f-silsila');
-      const coSelect = document.getElementById('f-country');
-      silsilas.forEach(s => { const opt = document.createElement('option'); opt.value = s; opt.textContent = s; silSelect.appendChild(opt); });
-      countries.forEach(c => { const opt = document.createElement('option'); opt.value = c; opt.textContent = c; coSelect.appendChild(opt); });
+      const sils = [...new Set(allData.map(f => f.properties.Silsila).filter(Boolean))].sort();
+      const cons = [...new Set(allData.map(f => f.properties.Country).filter(Boolean))].sort();
+      const selSil = document.getElementById('f-silsila');
+      const selCo = document.getElementById('f-country');
+      sils.forEach(s => { const o = document.createElement('option'); o.value = s; o.textContent = s; selSil.appendChild(o); });
+      cons.forEach(c => { const o = document.createElement('option'); o.value = c; o.textContent = c; selCo.appendChild(o); });
     }
 
     function initGlobe() {
       const container = document.getElementById('globe');
-      globeInstance = Globe(container)
+      globeInstance = new Globe(container)                    // ← NEW KEYWORD ADDED
         .globeImageUrl('//unpkg.com/three-globe/example/img/earth-dark.jpg')
         .backgroundImageUrl('//unpkg.com/three-globe/example/img/night-sky.png')
-        .pointOfView({ altitude: 2.8 }, 1500)
+        .pointOfView({ altitude: 2.5 }, 0)
         .pointsData(allData.map(f => {
           const [lon, lat] = f.geometry.coordinates;
-          const p = f.properties;
-          return { lat, lng: lon, ...p, size: 0.6 };
+          return { lat, lng: lon, ...f.properties, size: 0.8 };
         }))
-        .pointAltitude(0.01)
+        .pointAltitude(0)
         .pointColor(() => '#c9a84c')
         .pointRadius(d => d.size)
         .onPointClick(showModalPopup)
         .pointLabel(d => `<b>${d.Name}</b><br>${d.City}, ${d.Country}`);
 
-      // Auto-spin
       globeInstance.controls().autoRotate = true;
-      globeInstance.controls().autoRotateSpeed = 0.8;
+      globeInstance.controls().autoRotateSpeed = 1.2;
+
+      // Force resize after render
+      setTimeout(() => { if (globeInstance) globeInstance._renderer.setSize(container.clientWidth, container.clientHeight); }, 300);
     }
 
     function showModalPopup(d) {
       const html = `
-        <h2 style="color:#c9a84c;font-size:1.5rem;margin-bottom:8px;">${d.Name}</h2>
+        <h2 style="color:#c9a84c;font-size:1.6rem;margin-bottom:6px;">${d.Name}</h2>
         <p style="color:#10b981;margin-bottom:16px;">${d.Saint_Name} • ${d.Silsila}</p>
-        <p style="margin-bottom:12px;"><strong>${d.City}, ${d.Country}</strong> • ${d.Era_Century}</p>
-        <p style="line-height:1.6;color:#bbb0a0;">${d.Description}</p>
-        ${d["Links to know more"] ? `<a href="${d["Links to know more"]}" target="_blank" class="pop-link" style="color:#1a0f00 !important;background:#c9a84c !important;">Learn more about this dargah →</a>` : ''}
+        <p style="margin-bottom:14px;"><strong>${d.City}, ${d.Country}</strong> • ${d.Era_Century}</p>
+        <p style="line-height:1.65;color:#bbb0a0;">${d.Description}</p>
+        ${d["Links to know more"] ? `<a href="${d["Links to know more"]}" target="_blank" class="pop-link">Learn more about this dargah →</a>` : ''}
       `;
       document.getElementById('modal-content-inner').innerHTML = html;
       document.getElementById('modal').style.display = 'flex';
     }
 
-    function hideModal() {
-      document.getElementById('modal').style.display = 'none';
-    }
+    function hideModal() { document.getElementById('modal').style.display = 'none'; }
 
     function filterGlobe() {
-      const q = document.getElementById('search-input').value.toLowerCase().trim();
+      const q = (document.getElementById('search-input').value || '').toLowerCase();
       const sil = document.getElementById('f-silsila').value;
       const co = document.getElementById('f-country').value;
 
-      filteredData = allData.filter(f => {
+      const filtered = allData.filter(f => {
         const p = f.properties;
-        const matchSearch = !q || [p.Name, p.Saint_Name, p.City, p.Description].some(v => (v||'').toLowerCase().includes(q));
+        const matchQ = !q || [p.Name, p.Saint_Name, p.City, p.Description].some(v => (v||'').toLowerCase().includes(q));
         const matchSil = !sil || p.Silsila === sil;
         const matchCo = !co || p.Country === co;
-        return matchSearch && matchSil && matchCo;
+        return matchQ && matchSil && matchCo;
       });
 
       if (globeInstance) {
-        globeInstance.pointsData(filteredData.map(f => {
+        globeInstance.pointsData(filtered.map(f => {
           const [lon, lat] = f.geometry.coordinates;
-          const p = f.properties;
-          return { lat, lng: lon, ...p, size: 0.6 };
+          return { lat, lng: lon, ...f.properties, size: 0.8 };
         }));
       }
     }
@@ -201,11 +182,9 @@
       setTimeout(() => {
         intro.style.display = 'none';
         app.style.display = 'block';
-        requestAnimationFrame(() => {
-          app.classList.add('visible');
-          if (!globeInstance) initGlobe();
-        });
-      }, 800);
+        app.classList.add('visible');
+        if (!globeInstance) initGlobe();
+      }, 900);
     }
 
     function backToIntro() {
@@ -216,7 +195,7 @@
         app.style.display = 'none';
         intro.style.display = 'flex';
         intro.classList.remove('fade-out');
-      }, 600);
+      }, 700);
     }
   </script>
 </body>
