@@ -4,213 +4,434 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dargah World Map • Sufi Shrines Worldwide</title>
-  
+  <meta name="description" content="Interactive 3D globe of Sufi dargahs and sacred shrines across the world.">
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Amiri:ital,wght@400;700&family=Cinzel+Decorative:wght@400;700&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
-  
-  <script src="https://unpkg.com/globe.gl"></script>
-  
+  <link href="https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400&family=Cinzel+Decorative:wght@400;700&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
+
   <style>
-    :root { --gold: #c9a84c; }
-    * { margin:0; padding:0; box-sizing:border-box; }
-    html, body { width:100%; height:100%; overflow:hidden; background:#05050f; font-family:'Jost',sans-serif; color:#e8dcc8; }
-    
-    /* Intro */
-    #intro { position:fixed; inset:0; z-index:200; display:flex; align-items:center; justify-content:center; background:radial-gradient(ellipse 80% 70% at 50% 40%, #0d1a2e 0%, #05050f 75%); transition:opacity .9s ease; }
-    #intro.fade-out { opacity:0; pointer-events:none; }
-    
-    /* Main App */
-    #app { position:fixed; inset:0; opacity:0; pointer-events:none; transition:opacity .8s ease; }
-    #app.visible { opacity:1; pointer-events:all; }
-    #globe { position:absolute; inset:0; width:100%; height:100vh; }
-    
-    /* Header */
-    .map-header { position:absolute; top:0; left:0; right:0; z-index:1000; background:linear-gradient(180deg,rgba(5,5,15,.96) 0%,rgba(5,5,15,0) 100%); padding:16px 24px; display:flex; align-items:center; justify-content:space-between; pointer-events:none; }
-    .map-header > * { pointer-events:all; }
-    
-    /* Side Panel */
-    .side-panel { position:absolute; top:80px; left:24px; z-index:900; width:280px; display:flex; flex-direction:column; gap:12px; }
-    .pcard { background:rgba(10,10,24,0.95); border:1px solid rgba(201,168,76,0.25); border-radius:16px; padding:18px; backdrop-filter:blur(16px); }
-    
-    /* Modal */
-    .modal { position:fixed; inset:0; z-index:9999; display:none; align-items:center; justify-content:center; background:rgba(5,5,15,0.9); }
-    .modal-content { background:rgba(10,10,24,0.98); border:1px solid #c9a84c; border-radius:20px; width:90%; max-width:420px; padding:28px; box-shadow:0 0 60px rgba(201,168,76,.4); }
-    .pop-link { display:inline-flex; align-items:center; gap:8px; margin-top:20px; padding:14px 28px; background:#c9a84c; color:#1a0f00 !important; font-weight:600; border-radius:9999px; text-decoration:none; transition:all .2s; }
-    .pop-link:hover { background:#e8c97a; transform:translateY(-2px); }
+    :root {
+      --gold:     #c9a84c;
+      --gold-l:   #e8c97a;
+      --gold-dim: rgba(201,168,76,.17);
+      --emerald:  #10b981;
+      --deep:     #05050f;
+      --surface:  rgba(7,7,18,.94);
+      --border:   rgba(201,168,76,.17);
+      --text:     #e8dcc8;
+      --muted:    #7a6e60;
+      --r:        14px;
+    }
+    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+    html, body { width:100%; height:100%; overflow:hidden; background:var(--deep); }
+    body { font-family:'Jost',sans-serif; color:var(--text); }
+
+    #globe-wrap { width:100vw; height:100vh; }
+
+    /* subtle Islamic star tiling */
+    body::after {
+      content:''; position:fixed; inset:0; pointer-events:none; z-index:1;
+      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='88' height='88'%3E%3Cg fill='none' stroke='rgba(201%2C168%2C76%2C0.038)' stroke-width='0.5'%3E%3Cpolygon points='44%2C5 56%2C31 82%2C31 62%2C49 70%2C75 44%2C57 18%2C75 26%2C49 6%2C31 32%2C31'/%3E%3C/g%3E%3C/svg%3E");
+    }
+
+    /* ── LOADING ── */
+    #loading {
+      position:fixed; inset:0; z-index:300;
+      display:flex; flex-direction:column; align-items:center; justify-content:center; gap:18px;
+      background:var(--deep); transition:opacity .7s ease;
+    }
+    #loading.hide { opacity:0; pointer-events:none; }
+    .l-icon  { font-size:2.8rem; filter:drop-shadow(0 0 22px rgba(201,168,76,.65)); }
+    .l-title { font-family:'Cinzel Decorative',serif; font-size:1.45rem;
+               background:linear-gradient(135deg,var(--gold-l),var(--gold));
+               -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+    .l-sub   { font-size:.72rem; color:var(--muted); letter-spacing:3px; text-transform:uppercase; }
+    .spinner { width:42px; height:42px; border:2px solid rgba(201,168,76,.15);
+               border-top-color:var(--gold); border-radius:50%; animation:spin .8s linear infinite; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+
+    /* ── HEADER ── */
+    .hdr {
+      position:fixed; top:0; left:0; right:0; z-index:50;
+      background:linear-gradient(180deg, rgba(5,5,15,.92) 0%, transparent 100%);
+      padding:13px 18px 32px;
+      display:flex; align-items:center; justify-content:space-between;
+      pointer-events:none;
+    }
+    .hdr > * { pointer-events:all; }
+
+    .brand { display:flex; align-items:center; gap:11px; }
+    .brand-icon { font-size:1.8rem; line-height:1; filter:drop-shadow(0 0 10px rgba(201,168,76,.55)); }
+    .brand-text h1 {
+      font-family:'Cinzel Decorative',serif; font-size:1.05rem;
+      background:linear-gradient(135deg,var(--gold-l),var(--gold));
+      -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+    }
+    .brand-text p { font-size:.58rem; color:var(--muted); letter-spacing:2px; text-transform:uppercase; }
+
+    .hdr-r { display:flex; gap:7px; flex-wrap:wrap; }
+    .chip {
+      display:flex; align-items:center; gap:6px;
+      background:rgba(5,5,15,.88); border:1px solid var(--border);
+      border-radius:100px; padding:7px 13px;
+      font-size:.72rem; color:var(--gold);
+      backdrop-filter:blur(10px); white-space:nowrap;
+      text-decoration:none; transition:all .2s;
+    }
+    .chip:hover { background:rgba(201,168,76,.1); border-color:var(--gold); }
+
+    /* ── SIDE PANEL ── */
+    .side {
+      position:fixed; top:70px; left:12px; z-index:50;
+      width:246px; display:flex; flex-direction:column; gap:8px;
+    }
+    .pcard {
+      background:var(--surface); border:1px solid var(--border);
+      border-radius:var(--r); padding:12px 13px; backdrop-filter:blur(20px);
+    }
+    .plabel { font-size:.58rem; letter-spacing:2.5px; text-transform:uppercase; color:var(--muted); margin-bottom:8px; }
+
+    .sw { position:relative; }
+    .sw::before { content:'🔍'; position:absolute; left:9px; top:50%; transform:translateY(-50%); font-size:.68rem; pointer-events:none; }
+
+    input[type=search], select {
+      width:100%; background:rgba(255,255,255,.04);
+      border:1px solid rgba(201,168,76,.13); border-radius:9px;
+      padding:9px 9px 9px 30px;
+      color:var(--text); font-family:'Jost',sans-serif; font-size:.81rem;
+      outline:none; transition:border-color .2s; -webkit-appearance:none;
+    }
+    select { padding-left:9px; cursor:pointer; }
+    input[type=search]:focus, select:focus { border-color:var(--gold); }
+    input[type=search]::placeholder { color:var(--muted); }
+    select option { background:#0b0b1c; }
+
+    .frow { display:flex; flex-direction:column; gap:3px; margin-bottom:7px; }
+    .frow:last-of-type { margin-bottom:0; }
+    .flabel { font-size:.61rem; letter-spacing:1px; color:var(--muted); text-transform:uppercase; }
+
+    .res { text-align:center; font-size:.75rem; color:var(--muted); padding:5px 0 1px; }
+    .res b { color:var(--gold); font-weight:600; }
+
+    /* ── GLOBE MARKERS ── */
+    .gm {
+      font-size:19px; cursor:pointer; user-select:none; line-height:1;
+      filter:drop-shadow(0 0 6px rgba(201,168,76,.75));
+      transition:transform .13s, filter .13s;
+    }
+    .gm:hover { transform:scale(1.5); filter:drop-shadow(0 0 16px rgba(201,168,76,1)); }
+
+    /* ── INFO PANEL ── */
+    .info {
+      position:fixed; top:0; right:0; bottom:0; z-index:200;
+      width:min(360px, 93vw);
+      background:rgba(5,5,18,.97);
+      border-left:1px solid var(--border);
+      display:flex; flex-direction:column;
+      transform:translateX(106%);
+      transition:transform .42s cubic-bezier(.22,1,.36,1);
+      backdrop-filter:blur(24px);
+      box-shadow:-24px 0 70px rgba(0,0,0,.55);
+    }
+    .info.open { transform:translateX(0); }
+
+    .info-x {
+      position:absolute; top:13px; right:14px;
+      width:30px; height:30px; border-radius:50%;
+      background:rgba(255,255,255,.06); border:1px solid var(--border);
+      display:flex; align-items:center; justify-content:center;
+      color:var(--muted); font-size:.92rem; cursor:pointer; transition:all .2s;
+    }
+    .info-x:hover { background:rgba(201,168,76,.12); color:var(--gold); }
+
+    .info-top {
+      background:linear-gradient(135deg,rgba(201,168,76,.1) 0%,transparent 100%);
+      padding:22px 22px 16px; border-bottom:1px solid rgba(201,168,76,.09);
+      flex-shrink:0;
+    }
+    .info-mq  { font-size:1.9rem; line-height:1; margin-bottom:10px; }
+    .info-nm  { font-family:'Amiri',serif; font-size:1.38rem; color:var(--gold-l); line-height:1.3; }
+    .info-st  { font-size:.77rem; color:var(--emerald); margin-top:4px; font-weight:500; }
+
+    .info-body { padding:16px 22px 24px; overflow-y:auto; flex:1; }
+
+    .itags { display:flex; flex-wrap:wrap; gap:5px; margin-bottom:13px; }
+    .itag   { padding:3px 11px; border-radius:100px; font-size:.69rem; font-weight:500; }
+    .itag-g { background:rgba(16,185,129,.1);  color:#34d399; border:1px solid rgba(16,185,129,.25); }
+    .itag-a { background:rgba(201,168,76,.08); color:var(--gold); border:1px solid var(--border); }
+    .itag-m { background:rgba(255,255,255,.04); color:#888; border:1px solid rgba(255,255,255,.08); }
+
+    .info-desc { font-size:.86rem; line-height:1.72; color:#bbb0a0; }
+
+    .info-link {
+      display:inline-flex; align-items:center; gap:6px; margin-top:17px;
+      padding:9px 20px; background:rgba(201,168,76,.08); border:1px solid var(--border);
+      border-radius:100px; color:var(--gold); text-decoration:none;
+      font-size:.78rem; font-weight:500; transition:all .2s;
+    }
+    .info-link:hover { background:rgba(201,168,76,.18); transform:translateY(-1px); box-shadow:0 4px 20px rgba(201,168,76,.14); }
+
+    /* ── HINT ── */
+    .hint {
+      position:fixed; bottom:20px; left:50%; transform:translateX(-50%); z-index:50;
+      background:rgba(5,5,15,.82); border:1px solid var(--border);
+      border-radius:100px; padding:7px 20px;
+      font-size:.68rem; color:var(--muted); white-space:nowrap;
+      backdrop-filter:blur(10px); pointer-events:none;
+      animation:hintOut 1s ease 5s forwards;
+    }
+    @keyframes hintOut { to { opacity:0; } }
   </style>
 </head>
 <body>
 
-  <div id="intro">
-    <div style="position:relative;z-index:10;text-align:center;padding:40px 24px;max-width:520px;">
-      <div style="font-family:'Amiri',serif;font-size:1.9rem;color:#c9a84c;letter-spacing:3px;">بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</div>
-      <h1 style="font-family:'Cinzel Decorative',serif;font-size:3.4rem;margin:24px 0 12px;background:linear-gradient(155deg,#e8c97a,#c9a84c);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">Dargah World Map</h1>
-      <p style="color:#7a6e60;letter-spacing:4px;text-transform:uppercase;font-size:0.95rem;">Sufi Shrines &amp; Sacred Dargahs Worldwide</p>
-      <div style="margin:32px 0;display:flex;align-items:center;justify-content:center;gap:12px;background:rgba(201,168,76,.08);border:1px solid #c9a84c;border-radius:9999px;padding:12px 32px;width:fit-content;margin-left:auto;margin-right:auto;">
-        🕌 <span id="shrine-count" style="font-weight:700;color:#c9a84c;font-size:1.1rem;">—</span> shrines mapped
-      </div>
-      <button onclick="enterMap()" style="background:linear-gradient(135deg,#e8c97a,#c9a84c);color:#1a0f00;padding:18px 56px;font-weight:600;letter-spacing:2px;border-radius:9999px;border:none;cursor:pointer;box-shadow:0 12px 40px rgba(201,168,76,.4);font-size:1.05rem;">Explore the Globe →</button>
+<!-- Loading -->
+<div id="loading">
+  <div class="l-icon">🕌</div>
+  <div class="l-title">Dargah World Map</div>
+  <div class="l-sub">Loading shrines…</div>
+  <div class="spinner"></div>
+</div>
+
+<!-- Globe -->
+<div id="globe-wrap"></div>
+
+<!-- Header -->
+<div class="hdr">
+  <div class="brand">
+    <div class="brand-icon">🕌</div>
+    <div class="brand-text">
+      <h1>Dargah World Map</h1>
+      <p>Sufi Shrines &amp; Dargahs Worldwide</p>
     </div>
   </div>
-
-  <div id="app">
-    <div class="map-header">
-      <div style="display:flex;align-items:center;gap:14px;">
-        <span style="font-size:2.2rem;">🕌</span>
-        <div style="font-family:'Cinzel Decorative',serif;font-size:1.5rem;background:linear-gradient(135deg,#e8c97a,#c9a84c);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">Dargah World Map</div>
-      </div>
-      <a href="https://github.com/captainawesome78/dargah-worldmap" target="_blank" style="color:#c9a84c;text-decoration:none;font-size:0.95rem;display:flex;align-items:center;gap:6px;">⭐ Star on GitHub</a>
-    </div>
-
-    <div id="globe"></div>
-
-    <div class="side-panel">
-      <div class="pcard">
-        <input type="text" id="search-input" placeholder="Search name, saint, city..." oninput="filterGlobe()" style="width:100%;background:rgba(255,255,255,.08);border:1px solid rgba(201,168,76,.3);border-radius:12px;padding:14px 16px;color:#e8dcc8;outline:none;font-size:1rem;">
-      </div>
-      <div class="pcard">
-        <select id="f-silsila" onchange="filterGlobe()" style="width:100%;background:rgba(255,255,255,.08);border:1px solid rgba(201,168,76,.3);border-radius:12px;padding:14px;color:#e8dcc8;outline:none;font-size:1rem;"></select>
-      </div>
-      <div class="pcard">
-        <select id="f-country" onchange="filterGlobe()" style="width:100%;background:rgba(255,255,255,.08);border:1px solid rgba(201,168,76,.3);border-radius:12px;padding:14px;color:#e8dcc8;outline:none;font-size:1rem;"></select>
-      </div>
-    </div>
-
-    <button onclick="backToIntro()" style="position:absolute;bottom:30px;right:30px;z-index:900;background:rgba(10,10,24,0.9);border:1px solid #c9a84c;color:#c9a84c;padding:12px 26px;border-radius:9999px;cursor:pointer;font-size:0.95rem;">← Back to Intro</button>
+  <div class="hdr-r">
+    <div class="chip">🕌 <span id="count-chip">—</span> shrines</div>
+    <a href="https://github.com/captainawesome78/dargah-worldmap" target="_blank" class="chip">⭐ GitHub</a>
   </div>
+</div>
 
-  <div id="modal" class="modal" onclick="if(event.target.id==='modal')hideModal()">
-    <div class="modal-content" onclick="event.stopImmediatePropagation()">
-      <div id="modal-content-inner" style="color:#e8dcc8;"></div>
-      <button onclick="hideModal()" style="margin-top:24px;width:100%;padding:14px;background:#333;color:white;border:none;border-radius:12px;cursor:pointer;">Close</button>
+<!-- Search / Filter panel -->
+<div class="side">
+  <div class="pcard">
+    <div class="plabel">Search</div>
+    <div class="sw">
+      <input type="search" id="s-q" placeholder="Name, saint, city…" oninput="applyFilters()">
     </div>
   </div>
+  <div class="pcard">
+    <div class="plabel">Filter</div>
+    <div class="frow">
+      <div class="flabel">Silsila (Order)</div>
+      <select id="s-sl" onchange="applyFilters()"><option value="">All Silsilas</option></select>
+    </div>
+    <div class="frow">
+      <div class="flabel">Country</div>
+      <select id="s-co" onchange="applyFilters()"><option value="">All Countries</option></select>
+    </div>
+    <div class="res" id="res-line">Loading…</div>
+  </div>
+</div>
 
-  <script>
-    let globeInstance, allData = [];
+<!-- Info panel (slides from right) -->
+<div id="info-panel" class="info">
+  <div class="info-x" onclick="closePanel()">✕</div>
+  <div class="info-top">
+    <div class="info-mq">🕌</div>
+    <h2 class="info-nm" id="i-nm">—</h2>
+    <p  class="info-st" id="i-st"></p>
+  </div>
+  <div class="info-body">
+    <div class="itags" id="i-tags"></div>
+    <p  class="info-desc" id="i-desc"></p>
+    <a  class="info-link" id="i-lnk" href="#" target="_blank" style="display:none">Learn more &nbsp;→</a>
+  </div>
+</div>
 
-    // Local file testing often blocks fetch requests. 
-    // If you see 0 shrines mapped locally, it will work once pushed to GitHub.
-    fetch('data.geojson')
-      .then(r => r.json())
-      .then(data => {
-        allData = data.features || [];
-        document.getElementById('shrine-count').textContent = allData.length;
-        populateFilters();
-      })
-      .catch(err => console.error("Could not load data.geojson", err));
+<!-- Interaction hint (auto-fades) -->
+<div class="hint">🖱 Drag to rotate &nbsp;·&nbsp; Click 🕌 to explore &nbsp;·&nbsp; Scroll to zoom</div>
 
-    function populateFilters() {
-      const sils = [...new Set(allData.map(f => f.properties.Silsila).filter(Boolean))].sort();
-      const cons = [...new Set(allData.map(f => f.properties.Country).filter(Boolean))].sort();
-      const selSil = document.getElementById('f-silsila');
-      const selCo = document.getElementById('f-country');
-      
-      selSil.innerHTML = '<option value="">All Silsilas</option>';
-      selCo.innerHTML = '<option value="">All Countries</option>';
+<!-- Globe.gl -->
+<script src="https://unpkg.com/globe.gl@2.30.0/dist/globe.gl.min.js"></script>
+<script>
 
-      sils.forEach(s => { const o = document.createElement('option'); o.value = s; o.textContent = s; selSil.appendChild(o); });
-      cons.forEach(c => { const o = document.createElement('option'); o.value = c; o.textContent = c; selCo.appendChild(o); });
-    }
+/* ════════════════════════════════════
+   STATE
+════════════════════════════════════ */
+let world, allShrines = [], visible = [];
 
-    function initGlobe() {
-        const container = document.getElementById('globe');
-        
-        globeInstance = Globe()(container)
-          // Swapped to a bright, daytime satellite image
-          .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg')
-          .backgroundImageUrl('https://unpkg.com/three-globe/example/img/night-sky.png')
-          .pointOfView({ lat: 24, lng: 70, altitude: 2.2 }, 0)
-          .pointsData(allData.map(f => {
-            const coords = f.geometry?.coordinates || [0, 0];
-            return { lat: coords[1], lng: coords[0], ...f.properties, size: 0.8 };
-          }))
-          .pointAltitude(0)
-          // Changed pin color to a bright red to stand out against the daytime map. 
-          // Change '#ef4444' back to '#c9a84c' if you want to keep the gold!
-          .pointColor(() => '#ef4444') 
-          .pointRadius(d => d.size || 0.8)
-          .onPointClick(showModalPopup)
-          .pointLabel(d => `<b>${d.Name || 'Unknown'}</b><br>${d.City || ''}, ${d.Country || ''}`);
-  
-        globeInstance.controls().autoRotate = true;
-        // 1. Slowed down the rotation speed (was 1.2)
-        globeInstance.controls().autoRotateSpeed = 0.5;
-  
-        // 2. Add Hover-to-Pause functionality
-        container.addEventListener('pointerenter', () => {
-          globeInstance.controls().autoRotate = false;
-        });
-        container.addEventListener('pointerleave', () => {
-          globeInstance.controls().autoRotate = true;
-        });
-  
-        setTimeout(() => { 
-          if (globeInstance) {
-            globeInstance.width(container.clientWidth);
-            globeInstance.height(container.clientHeight);
-          } 
-        }, 400);
-    }
+/* ════════════════════════════════════
+   GLOBE INIT
+════════════════════════════════════ */
+function buildGlobe(shrines) {
+  allShrines = shrines;
+  visible    = [...shrines];
 
-    function showModalPopup(d) {
-      const html = `
-        <h2 style="color:#c9a84c;font-size:1.6rem;margin-bottom:6px;">${d.Name || ''}</h2>
-        <p style="color:#10b981;margin-bottom:16px;">${d.Saint_Name || ''} • ${d.Silsila || ''}</p>
-        <p style="margin-bottom:14px;"><strong>${d.City || ''}, ${d.Country || ''}</strong> • ${d.Era_Century || ''}</p>
-        <p style="line-height:1.65;color:#bbb0a0;">${d.Description || ''}</p>
-        ${d["Links to know more"] ? `<a href="${d["Links to know more"]}" target="_blank" class="pop-link">Learn more about this dargah →</a>` : ''}
-      `;
-      document.getElementById('modal-content-inner').innerHTML = html;
-      document.getElementById('modal').style.display = 'flex';
-    }
+  /* dropdowns */
+  fill('s-sl', [...new Set(shrines.map(s => s.silsila).filter(Boolean))].sort());
+  fill('s-co', [...new Set(shrines.map(s => s.country).filter(Boolean))].sort());
 
-    function hideModal() { document.getElementById('modal').style.display = 'none'; }
+  /* header count */
+  document.getElementById('count-chip').textContent = shrines.length;
+  document.getElementById('res-line').innerHTML = `Showing <b>${shrines.length}</b> of <b>${shrines.length}</b> shrines`;
 
-    function filterGlobe() {
-      const q = (document.getElementById('search-input').value || '').toLowerCase();
-      const sil = document.getElementById('f-silsila').value;
-      const co = document.getElementById('f-country').value;
+  /* ── create globe ── */
+  world = Globe({ waitForGlobeReady: true, animateIn: true })
+    .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-dark.jpg')
+    .backgroundImageUrl('https://unpkg.com/three-globe/example/img/night-sky.png')
+    .atmosphereColor('#10b981')
+    .atmosphereAltitude(0.18)
 
-      const filtered = allData.filter(f => {
-        const p = f.properties;
-        const matchQ = !q || [p.Name, p.Saint_Name, p.City, p.Description].some(v => (v||'').toLowerCase().includes(q));
-        const matchSil = !sil || p.Silsila === sil;
-        const matchCo = !co || p.Country === co;
-        return matchQ && matchSil && matchCo;
-      });
+    /* pulsing gold rings */
+    .ringsData(shrines)
+    .ringLat(d => d.lat)
+    .ringLng(d => d.lng)
+    .ringColor(() => t => `rgba(201,168,76,${Math.sqrt(1-t)*0.5})`)
+    .ringMaxRadius(3.5)
+    .ringPropagationSpeed(1.1)
+    .ringRepeatPeriod(1600)
 
-      if (globeInstance) {
-        globeInstance.pointsData(filtered.map(f => {
-          const coords = f.geometry?.coordinates || [0, 0];
-          return { lat: coords[1], lng: coords[0], ...f.properties, size: 0.8 };
-        }));
-      }
-    }
+    /* mosque HTML markers */
+    .htmlElementsData(shrines)
+    .htmlLat(d => d.lat)
+    .htmlLng(d => d.lng)
+    .htmlAltitude(0.022)
+    .htmlElement(d => {
+      const el = document.createElement('div');
+      el.className = 'gm';
+      el.textContent = '🕌';
+      el.title = d.name;
+      el.addEventListener('click', e => { e.stopPropagation(); openPanel(d); });
+      return el;
+    })
+    (document.getElementById('globe-wrap'));
 
-    function enterMap() {
-      const intro = document.getElementById('intro');
-      const app = document.getElementById('app');
-      intro.classList.add('fade-out');
-      setTimeout(() => {
-        intro.style.display = 'none';
-        app.style.display = 'block';
-        app.classList.add('visible');
-        if (!globeInstance) initGlobe();
-      }, 900);
-    }
+  /* orbit controls */
+  world.controls().autoRotate      = true;
+  world.controls().autoRotateSpeed = 0.38;
+  world.controls().enableDamping   = true;
+  world.controls().dampingFactor   = 0.06;
+  world.controls().minDistance     = 130;
+  world.controls().maxDistance     = 650;
 
-    function backToIntro() {
-      const app = document.getElementById('app');
-      const intro = document.getElementById('intro');
-      app.classList.remove('visible');
-      setTimeout(() => {
-        app.style.display = 'none';
-        intro.style.display = 'flex';
-        intro.classList.remove('fade-out');
-      }, 700);
-    }
-  </script>
+  /* pause on drag, resume after 2.5s */
+  world.controls().addEventListener('start', () => {
+    world.controls().autoRotate = false;
+  });
+  world.controls().addEventListener('end', () => {
+    setTimeout(() => { if (!panelOpen()) world.controls().autoRotate = true; }, 2500);
+  });
+
+  /* initial camera: South Asia */
+  world.pointOfView({ lat: 21, lng: 74, altitude: 2.3 }, 2500);
+
+  /* hide loading when ready */
+  world.onGlobeReady(() => {
+    document.getElementById('loading').classList.add('hide');
+  });
+
+  /* responsive resize */
+  window.addEventListener('resize', () => {
+    world.width(window.innerWidth).height(window.innerHeight);
+  });
+}
+
+function fill(id, vals) {
+  const el = document.getElementById(id);
+  vals.forEach(v => { const o = document.createElement('option'); o.value = o.textContent = v; el.appendChild(o); });
+}
+
+/* ════════════════════════════════════
+   FILTERS
+════════════════════════════════════ */
+function applyFilters() {
+  const q  = (document.getElementById('s-q').value  || '').toLowerCase();
+  const sl = document.getElementById('s-sl').value;
+  const co = document.getElementById('s-co').value;
+
+  visible = allShrines.filter(s => {
+    const mQ  = !q  || [s.name, s.saintName, s.city, s.description].some(v => (v||'').toLowerCase().includes(q));
+    const mSl = !sl || s.silsila === sl;
+    const mCo = !co || s.country === co;
+    return mQ && mSl && mCo;
+  });
+
+  world.ringsData(visible).htmlElementsData(visible);
+  document.getElementById('res-line').innerHTML =
+    `Showing <b>${visible.length}</b> of <b>${allShrines.length}</b> shrines`;
+}
+
+/* ════════════════════════════════════
+   INFO PANEL
+════════════════════════════════════ */
+function panelOpen() {
+  return document.getElementById('info-panel').classList.contains('open');
+}
+
+function openPanel(d) {
+  document.getElementById('i-nm').textContent   = d.name || '—';
+  document.getElementById('i-st').textContent   = '✦ ' + (d.saintName || '');
+  document.getElementById('i-desc').textContent = d.description || '';
+  document.getElementById('i-tags').innerHTML   = `
+    <span class="itag itag-g">${d.silsila    || ''}</span>
+    <span class="itag itag-a">${d.eraCentury || ''}</span>
+    <span class="itag itag-m">📍 ${d.city || ''}, ${d.country || ''}</span>
+  `;
+  const lnk = document.getElementById('i-lnk');
+  lnk.href = d.link || '#';
+  lnk.style.display = d.link ? 'inline-flex' : 'none';
+
+  document.getElementById('info-panel').classList.add('open');
+  world.controls().autoRotate = false;
+  world.pointOfView({ lat: d.lat, lng: d.lng, altitude: 1.3 }, 1100);
+}
+
+function closePanel() {
+  document.getElementById('info-panel').classList.remove('open');
+  setTimeout(() => {
+    world.pointOfView({ altitude: 2.3 }, 800);
+    setTimeout(() => { world.controls().autoRotate = true; }, 900);
+  }, 180);
+}
+
+/* click bare globe = close panel */
+document.getElementById('globe-wrap')
+  .addEventListener('click', e => {
+    if (e.target.id === 'globe-wrap' || e.target.tagName === 'CANVAS') closePanel();
+  });
+
+/* ════════════════════════════════════
+   DATA
+════════════════════════════════════ */
+function parse(gj) {
+  return (gj.features || []).map(f => {
+    const p = f.properties || {};
+    const [lng, lat] = f.geometry.coordinates;
+    return { lat, lng,
+      name: p.Name, saintName: p.Saint_Name,
+      silsila: p.Silsila, city: p.City, country: p.Country,
+      eraCentury: p.Era_Century, description: p.Description,
+      link: p['Links to know more']
+    };
+  });
+}
+
+fetch('data.geojson')
+  .then(r => r.json()).then(d => buildGlobe(parse(d)))
+  .catch(()           => buildGlobe(parse(FALLBACK)));
+
+/* ════════════════════════════════════
+   FALLBACK DATA
+════════════════════════════════════ */
+const FALLBACK = {"type":"FeatureCollection","features":[
+  {"type":"Feature","geometry":{"type":"Point","coordinates":[76.73177007,27.26432367]},"properties":{"Name":"Ajmer Sharif Dargah","Saint_Name":"Khwaja Moinuddin Chishti","Silsila":"Chishti","City":"Ajmer","Country":"India","Era_Century":"12th - 13th Century","Description":"The \"Gharib Nawaz\" of the East — one of the most visited Sufi shrines globally.","Links to know more":"https://en.wikipedia.org/wiki/Mu%27in_al-Din_Chishti"}},
+  {"type":"Feature","geometry":{"type":"Point","coordinates":[76.85241775,17.34459829]},"properties":{"Name":"Dargah Khwaja Bandanawaz","Saint_Name":"Khwaja Syed Muhammad Gesu Daraz","Silsila":"Chishti","City":"Gulbarga","Country":"India","Era_Century":"14th - 15th Century","Description":"A premier shrine of the Deccan; the saint was a prolific writer and disciple of Nasiruddin Chiragh Dehlavi.","Links to know more":"https://en.wikipedia.org/wiki/Bande_Nawaz"}},
+  {"type":"Feature","geometry":{"type":"Point","coordinates":[76.82484299,17.35192628]},"properties":{"Name":"Dargah Sheikh Sirajuddin Junaidi","Saint_Name":"Hazrat Sheikh Sirajuddin Junaidi","Silsila":"Junaidi","City":"Gulbarga","Country":"India","Era_Century":"14th Century","Description":"Known as \"Shaikh Roza\" — spiritual mentor of the Bahmani Sultans; lived to 111 years old.","Links to know more":"https://www.newageislam.com/islamic-personalities/adnan-faizi-new-age-islam/hazrat-shaykh-sirajuddin-junaidi-spiritual-luminary-guided-kings-deccan/d/136554"}},
+  {"type":"Feature","geometry":{"type":"Point","coordinates":[76.56149518,17.560075]},"properties":{"Name":"Dargah Ladle Mashaikh","Saint_Name":"Hazrat Alauddin Ansari","Silsila":"Chishti","City":"Aland","Country":"India","Era_Century":"14th Century","Description":"40km from Gulbarga, famous for the \"Asa Sharif\" (holy staff) and deep ties with Bandanawaz.","Links to know more":"https://www.theislamicheritage.com/detail/Dargah-Hazrat-Maqdoom-Alauddin-Ansari-R-A-Aland-shareef-"}},
+  {"type":"Feature","geometry":{"type":"Point","coordinates":[77.03443226,17.02999475]},"properties":{"Name":"Halkatta Sharif","Saint_Name":"Hazrat Syed Muhammad Badshah Quadeeri","Silsila":"Qadiri","City":"Halkatta","Country":"India","Era_Century":"20th Century","Description":"A major Qadiri center near Wadi; its annual Urs draws massive crowds.","Links to know more":"https://dargahinfo.com/Dargah_History.aspx?HID=119"}},
+  {"type":"Feature","geometry":{"type":"Point","coordinates":[76.7999209,17.35697767]},"properties":{"Name":"Dargah Ruknuddin Tola","Saint_Name":"Hazrat Ruknuddin Tola","Silsila":"Chishti","City":"Gulbarga","Country":"India","Era_Century":"14th Century","Description":"On a hilltop near the Bandanawaz Dargah — a close companion and contemporary of the saint.","Links to know more":"https://dargahinfo.com/Dargah_History.aspx?HID=346"}}
+]};
+</script>
 </body>
 </html>
