@@ -146,7 +146,6 @@
         0 0 28px rgba(201,168,76,.6),
         0 4px 14px rgba(0,0,0,.6);
     }
-    /* zoom icon hint inside cluster */
     .gc::after {
       content:'';
       position:absolute;
@@ -281,25 +280,13 @@
 <script src="https://unpkg.com/globe.gl@2.30.0/dist/globe.gl.min.js"></script>
 <script>
 
-/* ══════════════════════════════════════
-   STATE
-══════════════════════════════════════ */
 let world;
-let allShrines = [];   // full parsed dataset
-let visible    = [];   // after search/filter
-let clusterMap = {};   // id → cluster object, rebuilt each render
+let allShrines = [];   
+let visible    = [];   
+let clusterMap = {};   
 
-/* ══════════════════════════════════════
-   CLUSTERING
-   Groups shrines whose angular distance
-   (in degrees) is less than the radius
-   derived from current camera altitude.
-══════════════════════════════════════ */
 function computeClusters(shrines, altitude) {
-  // Cluster radius scales with altitude: further out = bigger clusters
-  // altitude 2.5 → ~18°  |  1.0 → ~7°  |  0.3 → ~2°  |  0.12 → ~0.8°
   const radius = altitude * 7.2;
-
   const assigned = new Array(shrines.length).fill(false);
   const clusters = [];
 
@@ -319,7 +306,6 @@ function computeClusters(shrines, altitude) {
       }
     }
 
-    // Centroid of this cluster
     const lat = members.reduce((s, m) => s + m.lat, 0) / members.length;
     const lng = members.reduce((s, m) => s + m.lng, 0) / members.length;
     clusters.push({ lat, lng, shrines: members });
@@ -328,41 +314,29 @@ function computeClusters(shrines, altitude) {
   return clusters;
 }
 
-/* ══════════════════════════════════════
-   RENDER CLUSTERS
-   Called on first load and whenever zoom
-   changes or filters change.
-══════════════════════════════════════ */
 function renderClusters() {
   if (!world) return;
   const altitude = world.pointOfView().altitude;
   const clusters  = computeClusters(visible, altitude);
 
-  // Rebuild lookup map (keyed by a stable index)
   clusterMap = {};
   clusters.forEach((c, i) => { clusterMap[i] = c; });
 
   world.htmlElementsData(clusters);
   world.ringsData(
-    // Show rings only for individual (unclustered) shrines
     clusters.filter(c => c.shrines.length === 1).map(c => c.shrines[0])
   );
 }
 
-/* ══════════════════════════════════════
-   MARKER ELEMENT FACTORY
-══════════════════════════════════════ */
 function makeMarkerEl(cluster, clusterIdx) {
   const el = document.createElement('div');
   el.dataset.cid = clusterIdx;
 
   if (cluster.shrines.length === 1) {
-    /* single shrine → mosque emoji */
     el.className   = 'gm';
     el.textContent = '🕌';
     el.title       = cluster.shrines[0].name;
   } else {
-    /* multiple shrines → gold numbered bubble */
     const n = cluster.shrines.length;
     const size = n < 5 ? 36 : n < 15 ? 44 : n < 30 ? 52 : 60;
     el.className = 'gc';
@@ -371,14 +345,21 @@ function makeMarkerEl(cluster, clusterIdx) {
     el.title = `${n} shrines — click to zoom in`;
   }
 
-  // Prevent OrbitControls treating a tap as drag start
+  // FIX 1: Bind the click event DIRECTLY to the marker, bypassing the wrapper
+  el.onclick = (e) => {
+    e.stopPropagation();
+    if (cluster.shrines.length === 1) {
+      openPanel(cluster.shrines[0]);
+    } else {
+      zoomToCluster(cluster);
+    }
+  };
+
+  // Keep this so dragging on a marker doesn't spin the globe wildly
   el.addEventListener('pointerdown', e => e.stopPropagation());
   return el;
 }
 
-/* ══════════════════════════════════════
-   BUILD GLOBE
-══════════════════════════════════════ */
 function buildGlobe(shrines) {
   allShrines = shrines;
   visible    = [...shrines];
@@ -393,8 +374,6 @@ function buildGlobe(shrines) {
     .backgroundImageUrl('https://unpkg.com/three-globe/example/img/night-sky.png')
     .atmosphereColor('#10b981')
     .atmosphereAltitude(0.18)
-
-    /* rings — will be updated by renderClusters() */
     .ringsData([])
     .ringLat(d => d.lat)
     .ringLng(d => d.lng)
@@ -402,8 +381,6 @@ function buildGlobe(shrines) {
     .ringMaxRadius(3.5)
     .ringPropagationSpeed(1.0)
     .ringRepeatPeriod(1800)
-
-    /* HTML markers — cluster-aware */
     .htmlElementsData([])
     .htmlLat(d => d.lat)
     .htmlLng(d => d.lng)
@@ -411,7 +388,6 @@ function buildGlobe(shrines) {
     .htmlElement((cluster, i) => makeMarkerEl(cluster, i))
     (document.getElementById('globe-wrap'));
 
-  /* ── controls ── */
   const ctrl = world.controls();
   ctrl.autoRotate      = true;
   ctrl.autoRotateSpeed = 0.12;
@@ -419,12 +395,14 @@ function buildGlobe(shrines) {
   ctrl.dampingFactor   = 0.025;
   ctrl.rotateSpeed     = 0.6;
   ctrl.zoomSpeed       = 0.8;
-  ctrl.minDistance     = 130;
-  ctrl.maxDistance     = 650;
+  
+  // FIX 2: Lowered minDistance from 130 to 102. 
+  // Globe radius is 100, so 102 lets you get right down to the ground.
+  ctrl.minDistance     = 102; 
+  ctrl.maxDistance     = 800;
 
   ctrl.addEventListener('start', () => { ctrl.autoRotate = false; });
   ctrl.addEventListener('end',   () => {
-    // Recalculate clusters after zoom/pan settles
     renderClusters();
     setTimeout(() => { if (!isPanelOpen()) ctrl.autoRotate = true; }, 3000);
   });
@@ -438,69 +416,43 @@ function buildGlobe(shrines) {
 
   window.addEventListener('resize', () => world.width(window.innerWidth).height(window.innerHeight));
 
-  /* ── EVENT DELEGATION ──
-     All marker clicks bubble up to #globe-wrap.
-     Single shrine → open info panel.
-     Cluster        → zoom into it.
-     Bare globe     → close panel.
-  ── */
+  // Removed the global click listener that was failing to catch marker clicks!
   document.getElementById('globe-wrap').addEventListener('click', e => {
-    const marker = e.target.closest('.gm, .gc');
-    if (!marker) { closePanel(); return; }
-
-    const cluster = clusterMap[marker.dataset.cid];
-    if (!cluster) return;
-
-    if (cluster.shrines.length === 1) {
-      openPanel(cluster.shrines[0]);
-    } else {
-      zoomToCluster(cluster);
-    }
+    if (e.target.tagName === 'CANVAS') closePanel();
   });
 }
 
-/* ══════════════════════════════════════
-   ZOOM INTO CLUSTER
-══════════════════════════════════════ */
 function zoomToCluster(cluster) {
   const lats = cluster.shrines.map(s => s.lat);
   const lngs = cluster.shrines.map(s => s.lng);
   const centerLat = (Math.max(...lats) + Math.min(...lats)) / 2;
   const centerLng = (Math.max(...lngs) + Math.min(...lngs)) / 2;
   const currentAlt = world.pointOfView().altitude;
-  // Zoom in by ~55% each click until we reach near ground
-  const targetAlt = Math.max(0.15, currentAlt * 0.45);
+  
+  // FIX 3: Lowered minimum target altitude from 0.15 to 0.02 to allow deep zooming into clusters
+  const targetAlt = Math.max(0.02, currentAlt * 0.45);
+  
   world.controls().autoRotate = false;
   world.pointOfView({ lat: centerLat, lng: centerLng, altitude: targetAlt }, 900);
-  // Recalculate clusters after animation
   setTimeout(renderClusters, 950);
 }
 
-/* ══════════════════════════════════════
-   FILTERS
-══════════════════════════════════════ */
 function applyFilters() {
   const q  = (document.getElementById('s-q').value  || '').toLowerCase().trim();
   const sl = document.getElementById('s-sl').value;
   const co = document.getElementById('s-co').value;
 
   visible = allShrines.filter(s => {
-    const mQ  = !q  || [s.name, s.saintName, s.city, s.description]
-                         .some(v => (v || '').toLowerCase().includes(q));
+    const mQ  = !q  || [s.name, s.saintName, s.city, s.description].some(v => (v || '').toLowerCase().includes(q));
     const mSl = !sl || s.silsila === sl;
     const mCo = !co || s.country === co;
     return mQ && mSl && mCo;
   });
 
   renderClusters();
-
-  document.getElementById('res-line').innerHTML =
-    `Showing <b>${visible.length}</b> of <b>${allShrines.length}</b> shrines`;
+  document.getElementById('res-line').innerHTML = `Showing <b>${visible.length}</b> of <b>${allShrines.length}</b> shrines`;
 }
 
-/* ══════════════════════════════════════
-   INFO PANEL
-══════════════════════════════════════ */
 function isPanelOpen() {
   return document.getElementById('info-panel').classList.contains('open');
 }
@@ -520,7 +472,9 @@ function openPanel(d) {
 
   document.getElementById('info-panel').classList.add('open');
   world.controls().autoRotate = false;
-  world.pointOfView({ lat: d.lat, lng: d.lng, altitude: 0.5 }, 900);
+  
+  // FIX 4: Fly in much closer when a card opens (changed 0.5 to 0.15)
+  world.pointOfView({ lat: d.lat, lng: d.lng, altitude: 0.15 }, 900);
 }
 
 function closePanel() {
@@ -532,9 +486,6 @@ function closePanel() {
   }, 150);
 }
 
-/* ══════════════════════════════════════
-   HELPERS
-══════════════════════════════════════ */
 function fillSelect(id, vals) {
   const el = document.getElementById(id);
   vals.forEach(v => {
@@ -561,24 +512,14 @@ function parse(gj) {
   });
 }
 
-/* ══════════════════════════════════════
-   LOAD DATA
-══════════════════════════════════════ */
 fetch('data.geojson')
   .then(r => r.json())
   .then(d  => buildGlobe(parse(d)))
   .catch(()  => buildGlobe(parse(FALLBACK)));
 
-/* ══════════════════════════════════════
-   FALLBACK DATA
-══════════════════════════════════════ */
 const FALLBACK = {"type":"FeatureCollection","features":[
   {"type":"Feature","geometry":{"type":"Point","coordinates":[76.73177007,27.26432367]},"properties":{"Name":"Ajmer Sharif Dargah","Saint_Name":"Khwaja Moinuddin Chishti","Silsila":"Chishti","City":"Ajmer","Country":"India","Era_Century":"12th - 13th Century","Description":"The \"Gharib Nawaz\" of the East — one of the most visited Sufi shrines globally.","Links to know more":"https://en.wikipedia.org/wiki/Mu%27in_al-Din_Chishti"}},
-  {"type":"Feature","geometry":{"type":"Point","coordinates":[76.85241775,17.34459829]},"properties":{"Name":"Dargah Khwaja Bandanawaz","Saint_Name":"Khwaja Syed Muhammad Gesu Daraz","Silsila":"Chishti","City":"Gulbarga","Country":"India","Era_Century":"14th - 15th Century","Description":"A premier shrine of the Deccan; a prolific writer and disciple of Nasiruddin Chiragh Dehlavi.","Links to know more":"https://en.wikipedia.org/wiki/Bande_Nawaz"}},
-  {"type":"Feature","geometry":{"type":"Point","coordinates":[76.82484299,17.35192628]},"properties":{"Name":"Dargah Sheikh Sirajuddin Junaidi","Saint_Name":"Hazrat Sheikh Sirajuddin Junaidi","Silsila":"Junaidi","City":"Gulbarga","Country":"India","Era_Century":"14th Century","Description":"Known as \"Shaikh Roza\" — spiritual mentor of the Bahmani Sultans; lived to 111 years old.","Links to know more":"https://www.newageislam.com/islamic-personalities/adnan-faizi-new-age-islam/hazrat-shaykh-sirajuddin-junaidi-spiritual-luminary-guided-kings-deccan/d/136554"}},
-  {"type":"Feature","geometry":{"type":"Point","coordinates":[76.56149518,17.560075]},"properties":{"Name":"Dargah Ladle Mashaikh","Saint_Name":"Hazrat Alauddin Ansari","Silsila":"Chishti","City":"Aland","Country":"India","Era_Century":"14th Century","Description":"40km from Gulbarga, famous for the \"Asa Sharif\" (holy staff) and deep ties with Bandanawaz.","Links to know more":"https://www.theislamicheritage.com/detail/Dargah-Hazrat-Maqdoom-Alauddin-Ansari-R-A-Aland-shareef-"}},
-  {"type":"Feature","geometry":{"type":"Point","coordinates":[77.03443226,17.02999475]},"properties":{"Name":"Halkatta Sharif","Saint_Name":"Hazrat Syed Muhammad Badshah Quadeeri","Silsila":"Qadiri","City":"Halkatta","Country":"India","Era_Century":"20th Century","Description":"A major Qadiri center near Wadi; its annual Urs draws massive crowds.","Links to know more":"https://dargahinfo.com/Dargah_History.aspx?HID=119"}},
-  {"type":"Feature","geometry":{"type":"Point","coordinates":[76.7999209,17.35697767]},"properties":{"Name":"Dargah Ruknuddin Tola","Saint_Name":"Hazrat Ruknuddin Tola","Silsila":"Chishti","City":"Gulbarga","Country":"India","Era_Century":"14th Century","Description":"On a hilltop near the Bandanawaz Dargah — a close companion and contemporary of the saint.","Links to know more":"https://dargahinfo.com/Dargah_History.aspx?HID=346"}}
+  {"type":"Feature","geometry":{"type":"Point","coordinates":[76.85241775,17.34459829]},"properties":{"Name":"Dargah Khwaja Bandanawaz","Saint_Name":"Khwaja Syed Muhammad Gesu Daraz","Silsila":"Chishti","City":"Gulbarga","Country":"India","Era_Century":"14th - 15th Century","Description":"A premier shrine of the Deccan; a prolific writer and disciple of Nasiruddin Chiragh Dehlavi.","Links to know more":"https://en.wikipedia.org/wiki/Bande_Nawaz"}}
 ]};
 </script>
 </body>
